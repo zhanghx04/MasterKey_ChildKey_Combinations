@@ -46,7 +46,7 @@ using namespace std;
         mid is abs(master[i] - child[i])
 */
 bool isValidSecondaryChildKey(vector<int> secondary, vector<int> child, vector<pair<int, int>>& pinSets) {
-    int len = secondary.size();
+    size_t len = secondary.size();
     for (int i = 0; i < len; ++i) {
         int bot = min(secondary[i], child[i]);
         int mid = abs(secondary[i] - child[i]);
@@ -57,16 +57,24 @@ bool isValidSecondaryChildKey(vector<int> secondary, vector<int> child, vector<p
     return true;
 }
 
-void getAssemble(vector<int>& master, vector<int> child, map<vector<int>,vector<pair<int, int>>>& allPossibleResults) {
-    int len = master.size();
+/**
+ *  @brief getAssembly function computes each pair of bot-pin and mid-pin' lengths based on the master key and
+ *  current child key
+ *  @param master is the master key, the element is the length of each pin
+ *  @param child is the child key, the element is the length of each pin
+ *  @param allPossibleResults is the map that the key is the child key, the value is the assembly of the child key
+ */
+void getAssembly(const vector<int>& master, const vector<int>& child, map<vector<int>,vector<pair<int, int>>>&
+        allPossibleResults) {
+    size_t len = master.size();
     for (int i = 0; i < len; ++i) {
         int bot = min(master[i], child[i]);
         int mid = abs(master[i] - child[i]);
-        allPossibleResults[child].push_back({bot, mid});
+        allPossibleResults[child].emplace_back(bot, mid);
     }
 }
 
-void printWithChild(vector<int> child, map<vector<int>,vector<pair<int, int>>>& allPossibleResults) {
+void printWithChild(const vector<int>& child, map<vector<int>,vector<pair<int, int>>>& allPossibleResults) {
     cout << "{ ";
     for (int i : child) {
         cout << i << " ";
@@ -153,7 +161,7 @@ void writeAllMasterAndChild(vector<int>& master,
         output_file << secondary;
         output_file << separateLineSMasterAndChild;
         // Child keys
-        for (auto child : it->second) {
+        for (auto& child : it->second) {
             string childInfo = currLineResult(child, allMap);
             output_file << childInfo;
         }
@@ -164,14 +172,15 @@ void writeAllMasterAndChild(vector<int>& master,
 int main() {
     vector<int> master = {1, 2, 3, 4, 5, 6}; // 2, 3, 2, 1, 5, 4
     map<vector<int>,vector<pair<int, int>>> allPossibleResults, allPossibleResultsMap;
-    // for child comb
+
+    // Traversal all possible child key combinations and compute the assembly
     for (int i1 = 1; i1 <= 7; ++i1) {
         for (int i2 = 1; i2 <= 7; ++i2) {
             for (int i3 = 1; i3 <= 7; ++i3) {
                 for (int i4 = 1; i4 <= 7; ++i4) {
                     for (int i5 = 1; i5 <= 7; ++i5) {
                         for (int i6 = 1; i6 <= 7; ++i6) {
-                            getAssemble(master, {i1, i2, i3, i4, i5, i6}, allPossibleResults);
+                            getAssembly(master, {i1, i2, i3, i4, i5, i6}, allPossibleResults);
                         }
                     }
                 }
