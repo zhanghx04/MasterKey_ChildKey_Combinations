@@ -45,11 +45,22 @@ using namespace std;
         bot is min(master[i], child[i])
         mid is abs(master[i] - child[i])
 */
-bool isValidSecondaryChildKey(vector<int> secondary, vector<int> child, vector<pair<int, int>>& pinSets) {
+
+/**
+ *  @brief isValidSeondaryChildKey will check whether the child key can be the secondary child key of the seondary
+ *  master key.
+ *  @param secondary is the list of pins of the secondary master key
+ *  @param child is the list of pins of the secondary child key candidate
+ *  @param pinSets is the pin set of the child key
+ *  @return Only when the child key and the secondary master key meet the requirement
+ */
+bool isValidSecondaryChildKey(const vector<int>& secondary, const vector<int>& child, const vector<pair<int, int>>&
+pinSets) {
     size_t len = secondary.size();
     for (int i = 0; i < len; ++i) {
-        int bot = min(secondary[i], child[i]);
-        int mid = abs(secondary[i] - child[i]);
+        // For the valid secondary child keys
+        // either the secondary master key's pin[i] is equal to the child key's bot-pin[i]
+        // or the secondary master key's pin[i] is equal to the sum of  child key's bot-pin[i] and mid-pin[i]
         if (secondary[i] != pinSets[i].first && secondary[i] != pinSets[i].first + pinSets[i].second) {
             return false;
         }
@@ -59,7 +70,7 @@ bool isValidSecondaryChildKey(vector<int> secondary, vector<int> child, vector<p
 
 /**
  *  @brief getAssembly function computes each pair of bot-pin and mid-pin' lengths based on the master key and
- *  current child key
+ *  current child key.
  *  @param master is the master key, the element is the length of each pin
  *  @param child is the child key, the element is the length of each pin
  *  @param allPossibleResults is the map that the key is the child key, the value is the assembly of the child key
@@ -117,12 +128,21 @@ void writeAllChild(map<vector<int>,vector<pair<int, int>>>& allPossibleResults) 
     output_file.close();
 }
 
-string currLineResult(vector<int> key, map<vector<int>,vector<pair<int, int>>>& allMap) {
+/**
+ *  @brief currlineResult collects all of the pin set of the child key.
+ *  @param key is the child key
+ *  @param allMap is the map contains all of the possible child key that could be the child key of the master key
+ *  @return return the child key information as string
+ */
+string currLineResult(const vector<int>& key, map<vector<int>,vector<pair<int, int>>>& allMap) {
     string result = "{";
+    // Child key
     for (int c : key) {
         result += to_string(c) + " ";
     }
     result += "}  |  ";
+
+    // Pin sets
     for (auto& p : allMap[key]) {
         result += "(" + to_string(p.first) + " + " + to_string(p.second) + ")";
     }
@@ -130,7 +150,14 @@ string currLineResult(vector<int> key, map<vector<int>,vector<pair<int, int>>>& 
 
     return result;
 }
-void writeAllMasterAndChild(vector<int>& master,
+
+/**
+ *  @brief writeAllMasterAndChild writes the whole key information into a local file
+ *  @param master is the master key
+ *  @param secondaryResults contains the secondary master key and all of its secondary child key
+ *  @param allMap contains all of the information of possible child keys
+ */
+void writeAllMasterAndChild(const vector<int>& master,
                             map<vector<int>, vector<vector<int>>>& secondaryResults,
                             map<vector<int>,vector<pair<int, int>>>& allMap) {
     string separateLineSMaster = "\n========================================================================\n\n";
@@ -150,27 +177,136 @@ void writeAllMasterAndChild(vector<int>& master,
     cout << secondaryResults.size() << endl;
 
     // Secondary Master and their child keys
-    for (auto it = secondaryResults.begin(); it != secondaryResults.end(); ++it) {
+    for (auto& [secondaryMasterKey, secondaryChildKeyList] : secondaryResults) {
         output_file << separateLineSMaster;
         // Secondary
         string secondary = "{ ";
-        for (int c : it->first) {
+        for (int c : secondaryMasterKey) {
             secondary += to_string(c) + " ";
         }
-        secondary += "}\n";
+        secondary += "}";
+        secondary += " - Total Child Key: " + to_string(secondaryChildKeyList.size()) + "\n";
         output_file << secondary;
         output_file << separateLineSMasterAndChild;
         // Child keys
-        for (auto& child : it->second) {
+        for (auto& child : secondaryChildKeyList) {
             string childInfo = currLineResult(child, allMap);
             output_file << childInfo;
         }
     }
+
+    // Close the file
     output_file.close();
 }
 
+/**
+ *  @brief writeAllMasterAndChild writes the whole key information into a local file
+ *  @param master is the master key
+ *  @param secondaryResults contains the secondary master key and all of its secondary child key
+ *  @param allMap contains all of the information of possible child keys
+ */
+void writeOneLevelMasterAndChild(const vector<int>& master,
+                            vector<vector<int>>& childResults,
+                            map<vector<int>,vector<pair<int, int>>>& allMap) {
+    string separateLineSMaster = "\n========================================================================\n\n";
+    string separateLineSMasterAndChild = "------------------------------------------------------------------------\n";
+
+    // Open the file that will write data into
+    ofstream output_file("1levelManageMap.txt");
+
+    // Master key
+    string record = "{ ";
+    for (int c : master) {
+        record += to_string(c) + " ";
+    }
+    record += "}";
+    record += " - Total Child Key: " + to_string(childResults.size()) + "\n";
+    output_file << record;
+    output_file << separateLineSMaster;
+
+    cout << childResults.size() << endl;
+
+    // Get child keys
+    for (auto& childKeyList : childResults) {
+        string childInfo = currLineResult(childKeyList, allMap);
+        output_file << childInfo;
+    }
+
+    // Close the file
+    output_file.close();
+}
+
+/**
+ *  @brief twoLevelManagement manage the the keys that has master, secondary master, and secondary child
+ */
+void twoLevelManagement(const vector<int>& master, map<vector<int>,vector<pair<int, int>>>& allPossibleResults,
+                        map<vector<int>,vector<pair<int, int>>>& allPossibleResultsMap) {
+    // Secondary master keys
+    int numSecMaster = 100;
+    int numAllPossible = (int)allPossibleResults.size();
+    int n = numAllPossible / (numSecMaster + 1);
+    set<vector<int>> secondaryMasters;
+
+    int count = 0;
+    for (auto [childKey, assembly] : allPossibleResults) {
+        // Here, get every n_th childkey as secondary master key
+        if (count % n == 0) {
+            count = 0;
+            secondaryMasters.insert(childKey);
+        }
+
+        // Only get numSecMaster number of childkeys
+        if (secondaryMasters.size() == numSecMaster) break;
+        count++;
+    }
+
+    cout << "SecondaryMaster count: " << secondaryMasters.size() << endl;
+
+    // Remove the secondary master from allPossibleResults
+    for (auto& secondaryKey : secondaryMasters) {
+        allPossibleResults.erase(secondaryKey);
+    }
+
+    cout << "ALl possible child key count without secondary master keys: " << allPossibleResults.size() << endl;
+
+    map<vector<int>, vector<vector<int>>> secondaryResults;
+
+    // Go through all the possible child keys and assign to the secondary master keys
+    for (auto& [childKey, childKeyAssembly] : allPossibleResults) {
+        for (auto& secondaryKey : secondaryMasters) {
+            if (isValidSecondaryChildKey(secondaryKey, childKey, childKeyAssembly)) {
+                secondaryResults[secondaryKey].push_back(childKey);
+                break;
+            }
+        }
+    }
+
+    writeAllMasterAndChild(master, secondaryResults, allPossibleResultsMap);
+}
+
+/**
+ *  @brief oneLevelManagement manage the the keys that has master and child
+ */
+void oneLevelManagement(const vector<int>& master, map<vector<int>,vector<pair<int, int>>>& allPossibleResults,
+                        map<vector<int>,vector<pair<int, int>>>& allPossibleResultsMap) {
+    vector<vector<int>> childKeyResults;
+
+    // Go through all the possible child keys and assign to the secondary master keys
+    for (auto& [childKey, childKeyAssembly] : allPossibleResults) {
+            if (isValidSecondaryChildKey(master, childKey, childKeyAssembly)) {
+                childKeyResults.push_back(childKey);
+            }
+    }
+
+    writeOneLevelMasterAndChild(master, childKeyResults, allPossibleResultsMap);
+}
+
+
+
 int main() {
-    vector<int> master = {1, 2, 3, 4, 5, 6}; // 2, 3, 2, 1, 5, 4
+    const vector<int> master = {1, 2, 3, 4, 5, 6}; // 2, 3, 2, 1, 5, 4
+    int level = 1;
+
     map<vector<int>,vector<pair<int, int>>> allPossibleResults, allPossibleResultsMap;
 
     // Traversal all possible child key combinations and compute the assembly
@@ -193,44 +329,13 @@ int main() {
     allPossibleResults.erase(master);
     cout << "ALl possible child key count: " << allPossibleResults.size() << endl;
 
-    // Secondary master keys
-    int numSecMaster = 100;
-    int numAllPossible = allPossibleResults.size();
-    int n = numAllPossible / (numSecMaster + 1);
-    set<vector<int>> secondaryMasters;
-
-    int count = 0;
-    for (auto it = allPossibleResults.begin(); it != allPossibleResults.end(); ++it) {
-        if (count % n == 0) {
-            count = 0;
-            secondaryMasters.insert(it->first);
-        }
-        if (secondaryMasters.size() == numSecMaster) break;
-        count++;
+    if (level % 2) {
+        cout << "Start One Level Master/Child key Combination..." << endl;
+        oneLevelManagement(master, allPossibleResults, allPossibleResults);
+    } else {
+        cout << "Start Two Level Master/Child key Combination..." << endl;
+        twoLevelManagement(master, allPossibleResults, allPossibleResultsMap);
     }
-
-    cout << "SecondaryMaster count: " << secondaryMasters.size() << endl;
-
-    // Remove the secondary master from allPossibleResults
-    for (auto it = secondaryMasters.begin(); it != secondaryMasters.end(); ++it) {
-        allPossibleResults.erase(*it);
-    }
-
-    cout << "ALl possible child key count without secondary master keys: " << allPossibleResults.size() << endl;
-
-    map<vector<int>, vector<vector<int>>> secondaryResults;
-
-    // Go through all the possible child keys and assign to the secondary master keys
-    for (auto it = allPossibleResults.begin(); it != allPossibleResults.end(); ++it) {
-        for (auto itSecond = secondaryMasters.begin(); itSecond != secondaryMasters.end(); ++itSecond) {
-            if (isValidSecondaryChildKey(*itSecond, it->first, it->second)) {
-                secondaryResults[*itSecond].push_back(it->first);
-                break;
-            }
-        }
-    }
-
-    writeAllMasterAndChild(master, secondaryResults, allPossibleResultsMap);
 
     // printWithChild({1, 1, 1, 1, 1, 1}, allPossibleResults);
     // printWithChild({2, 5, 1, 2, 1, 1}, allPossibleResults);
