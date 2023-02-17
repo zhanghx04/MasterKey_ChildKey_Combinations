@@ -5,6 +5,8 @@ Author: Haoxiang Zhang
 The repository solves the problem about the combination of driver pins and key pins.
 Every lock 
 
+[Pin Tumbler Lock Wiki](https://en.wikipedia.org/wiki/Pin_tumbler_lock)
+
 ## Explain
 
 Mid and Bottom parts combination for the master key and child keys.
