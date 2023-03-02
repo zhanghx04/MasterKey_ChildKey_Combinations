@@ -1,5 +1,9 @@
 # Ignore the build directory
 cmake-build-debug/
+build/
 
 # Ignore .idea config file
 .idea
+
+# Ignore vscode folder
+.vscode/
