@@ -56,16 +56,38 @@ using namespace std;
  */
 bool isValidSecondaryChildKey(const vector<int>& secondary, const vector<int>& child, const vector<pair<int, int>>&
 pinSets) {
+    if (secondary == child) return false;
     size_t len = secondary.size();
     for (int i = 0; i < len; ++i) {
         // For the valid secondary child keys
         // either the secondary master key's pin[i] is equal to the child key's bot-pin[i]
         // or the secondary master key's pin[i] is equal to the sum of  child key's bot-pin[i] and mid-pin[i]
-        if (secondary[i] != pinSets[i].first && secondary[i] != pinSets[i].first + pinSets[i].second) {
-            return false;
+//        if (secondary[i] != pinSets[i].first || secondary[i] != (pinSets[i].first + pinSets[i].second)) {
+//            return false;
+//        }
+        if (pinSets[i].first == min(secondary[i], child[i]) && pinSets[i].second == abs(secondary[i] - child[i])) {
+            continue;
         }
+        return false;
     }
     return true;
+}
+
+/**
+ * @brief checkKeyHasMoreThan3IdenticalNumbers wille check if there are more than 4 continuously number that are the
+ * same. For example, [5, 2, 2, 2, 2, 3] will return true
+ */
+bool checkKeyHasMoreThan3IdenticalNumbers(const vector<int>& child) {
+    int n = 1;
+    for (int i = 1; i < child.size(); ++i) {
+        if (child[i] == child[i - 1]) {
+            n++;
+        } else if (child[i] != child[i - 1]) {
+            n = 1;
+        }
+        if (n >= 4) return true;
+    }
+    return false;
 }
 
 /**
@@ -77,10 +99,18 @@ pinSets) {
  */
 void getAssembly(const vector<int>& master, const vector<int>& child, map<vector<int>,vector<pair<int, int>>>&
         allPossibleResults) {
+    // Skip the child key that has more than 3 continuously same numbers.
+    if (checkKeyHasMoreThan3IdenticalNumbers(child)) {
+        return;
+    }
+
     size_t len = master.size();
     for (int i = 0; i < len; ++i) {
         int bot = min(master[i], child[i]);
         int mid = abs(master[i] - child[i]);
+        if (min(bot, mid) == 0) {
+            return;
+        }
         allPossibleResults[child].emplace_back(bot, mid);
     }
 }
@@ -135,16 +165,16 @@ void writeAllChild(map<vector<int>,vector<pair<int, int>>>& allPossibleResults) 
  *  @return return the child key information as string
  */
 string currLineResult(const vector<int>& key, map<vector<int>,vector<pair<int, int>>>& allMap) {
-    string result = "{";
+    string result;
     // Child key
     for (int c : key) {
         result += to_string(c) + " ";
     }
-    result += "}  |  ";
+    result.pop_back();
 
     // Pin sets
     for (auto& p : allMap[key]) {
-        result += "(" + to_string(p.first) + " + " + to_string(p.second) + ")";
+        result += "," + to_string(p.first) + "," + to_string(p.second);
     }
     result += "\n";
 
@@ -212,17 +242,17 @@ void writeOneLevelMasterAndChild(const vector<int>& master,
     string separateLineSMasterAndChild = "------------------------------------------------------------------------\n";
 
     // Open the file that will write data into
-    ofstream output_file("1levelManageMap.txt");
+    ofstream output_file("1levelManageMap.csv");
 
     // Master key
-    string record = "{ ";
+    string record;
     for (int c : master) {
         record += to_string(c) + " ";
     }
-    record += "}";
-    record += " - Total Child Key: " + to_string(childResults.size()) + "\n";
-    output_file << record;
-    output_file << separateLineSMaster;
+    record.pop_back();  // remove the last space char
+//    record += " - Total Child Key: " + to_string(childResults.size()) + "\n";
+    output_file << record + "\n";
+//    output_file << separateLineSMaster;
 
     cout << childResults.size() << endl;
 
@@ -242,7 +272,7 @@ void writeOneLevelMasterAndChild(const vector<int>& master,
 void twoLevelManagement(const vector<int>& master, map<vector<int>,vector<pair<int, int>>>& allPossibleResults,
                         map<vector<int>,vector<pair<int, int>>>& allPossibleResultsMap) {
     // Secondary master keys
-    int numSecMaster = 100;
+    int numSecMaster = 1;
     int numAllPossible = (int)allPossibleResults.size();
     int n = numAllPossible / (numSecMaster + 1);
     set<vector<int>> secondaryMasters;
@@ -303,12 +333,7 @@ void oneLevelManagement(const vector<int>& master, map<vector<int>,vector<pair<i
 
 
 
-int main() {
-    const vector<int> master = {1, 2, 3, 4, 5, 6}; // 2, 3, 2, 1, 5, 4
-    int level = 1;
-
-    map<vector<int>,vector<pair<int, int>>> allPossibleResults, allPossibleResultsMap;
-
+void SixHolesCase(const vector<int>& master, map<vector<int>, vector<pair<int, int>>>& allPossibleResults) {
     // Traversal all possible child key combinations and compute the assembly
     for (int i1 = 1; i1 <= 7; ++i1) {
         for (int i2 = 1; i2 <= 7; ++i2) {
@@ -322,6 +347,52 @@ int main() {
                 }
             }
         }
+    }
+}
+
+void FiveHolesCase(const vector<int>& master, map<vector<int>, vector<pair<int, int>>>& allPossibleResults) {
+    // Traversal all possible child key combinations and compute the assembly
+    for (int i1 = 1; i1 <= 7; ++i1) {
+        for (int i2 = 1; i2 <= 7; ++i2) {
+            for (int i3 = 1; i3 <= 7; ++i3) {
+                for (int i4 = 1; i4 <= 7; ++i4) {
+                    for (int i5 = 1; i5 <= 7; ++i5) {
+                        getAssembly(master, {i1, i2, i3, i4, i5}, allPossibleResults);
+                    }
+                }
+            }
+        }
+    }
+}
+
+void FourHolesCase(const vector<int>& master, map<vector<int>, vector<pair<int, int>>>& allPossibleResults) {
+    // Traversal all possible child key combinations and compute the assembly
+    for (int i1 = 1; i1 <= 7; ++i1) {
+        for (int i2 = 1; i2 <= 7; ++i2) {
+            for (int i3 = 1; i3 <= 7; ++i3) {
+                for (int i4 = 1; i4 <= 7; ++i4) {
+                    getAssembly(master, {i1, i2, i3, i4}, allPossibleResults);
+                }
+            }
+        }
+    }
+}
+
+int main() {
+    const vector<int> master = {2, 4, 6, 7, 5, 3}; // 2, 3, 2, 1, 5, 4
+    int level = 1;      // 1, 2
+    int numHoles = 6;   // 4, 5, 6
+
+    map<vector<int>,vector<pair<int, int>>> allPossibleResults, allPossibleResultsMap;
+
+    if (numHoles == 4) {
+        FourHolesCase(master, allPossibleResults);
+    } else if (numHoles == 5) {
+        FiveHolesCase(master, allPossibleResults);
+    } else if (numHoles == 6) {
+        SixHolesCase(master, allPossibleResults);
+    } else {
+        return 0;
     }
     allPossibleResultsMap = allPossibleResults;
 
